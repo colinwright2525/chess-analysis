@@ -1,0 +1,155 @@
+{% extends 'base.html' %}
+{% import "bootstrap/wtf.html" as wtf %}
+
+{% block content %}
+
+    <div class="page-header">
+        <h1>Lichess Openings Trainer</h1>
+    </div>
+    <hr>
+    <div class="container-fluid">
+        <div class="row justify-content-start">
+            <div class="col">
+                <h5>Find data related to your best and worst chess openings!</h5>
+                <h5>Insert your preferences into the form below.</h5>
+                <br>
+                <form method="post">
+                    <p class="form_title">Lichess username:</p>
+                    {{ form.user_name }}
+                    <p class="form_title">What is your secret lichess API token?</p>
+                    {{ form.token }}
+                    <p class="form_title">Number of days back from which to pull data:</p>
+                    {{ form.days_back }}
+                    <br>
+                    <br>
+                    {{ form.submit }}
+                </form>
+            </div>
+            <div class="col d-flex justify-content-center">
+                <img src="static/images/chess-sleek.jpg">
+            </div>
+        </div>
+        <br>
+        <br>
+        <h5><em>Data below is for Openings with at least Five Games Played</em></h5>
+        <br>
+        <div class="row justify-content-start">
+            <div class="col">
+            <h5>Best Openings as White</h5>
+            <table class="table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Related Opening</th>
+                      <th scope="col">First Three Moves</th>
+                      <th scope="col">Percent won</th>
+                        <th scope="col">Number of games won</th>
+                        <th scope="col">Number of games lost</th>
+
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for item in white_w %}
+                    <tr>
+                      <td>{{ item.name }}</td>
+                      <td>{{ item.moves }}</td>
+                      <td>{{ item.percent }}</td>
+                        <td>{{ item.won }}</td>
+                        <td>{{ item.lost }}</td>
+
+                    </tr>
+                  {% endfor %}
+
+
+                  </tbody>
+                </table>
+                </div>
+            <div class="col">
+            <h5>Worst Openings as White</h5>
+            <table class="table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Related Opening</th>
+                      <th scope="col">First Three Moves</th>
+                      <th scope="col">Percent won</th>
+                        <th scope="col">Number of games won</th>
+                        <th scope="col">Number of games lost</th>
+
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for item in white_l %}
+                    <tr>
+                      <td>{{ item.name }}</td>
+                      <td>{{ item.moves }}</td>
+                      <td>{{ item.percent }}</td>
+                        <td>{{ item.won }}</td>
+                        <td>{{ item.lost }}</td>
+                    </tr>
+                    {% endfor %}
+
+                  </tbody>
+                </table>
+                </div>
+            </div>
+        <br>
+        <div class="row justify-content-start">
+            <div class="col">
+            <h5>Best Openings as Black</h5>
+            <table class="table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Related Opening</th>
+                      <th scope="col">First Three Moves</th>
+                      <th scope="col">Percent won</th>
+                        <th scope="col">Number of games won</th>
+                        <th scope="col">Number of games lost</th>
+
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for item in black_w %}
+                    <tr>
+                      <td>{{ item.name }}</td>
+                      <td>{{ item.moves }}</td>
+                      <td>{{ item.percent }}</td>
+                        <td>{{ item.won }}</td>
+                        <td>{{ item.lost }}</td>
+                    </tr>
+                    {% endfor %}
+
+                  </tbody>
+                </table>
+                </div>
+            <div class="col">
+            <h5>Worst Openings as Black</h5>
+            <table class="table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Related Opening</th>
+                      <th scope="col">First Three Moves</th>
+                      <th scope="col">Percent won</th>
+                        <th scope="col">Number of games won</th>
+                        <th scope="col">Number of games lost</th>
+
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for item in black_l %}
+                    <tr>
+                      <td>{{ item.name }}</td>
+                      <td>{{ item.moves }}</td>
+                      <td>{{ item.percent }}</td>
+                        <td>{{ item.won }}</td>
+                        <td>{{ item.lost }}</td>
+                    </tr>
+                    {% endfor %}
+
+                  </tbody>
+                </table>
+                </div>
+            </div>
+        <div class="row justify-content-start">
+            </div>
+    </div>
+
+{% endblock %}
