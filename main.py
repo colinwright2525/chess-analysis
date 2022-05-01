@@ -1,3 +1,4 @@
+import plotly.utils
 import requests
 import berserk
 import pandas as pd
@@ -5,6 +6,7 @@ import math
 import numpy as np
 import chess.pgn
 import datetime as dt
+import plotly
 import plotly.express as px
 import itertools
 import matplotlib.pyplot as plt
@@ -15,6 +17,7 @@ from flask_wtf import FlaskForm
 from wtforms import StringField, SubmitField, IntegerField, PasswordField
 from wtforms.validators import DataRequired
 from PIL import Image
+import json
 
 # image = Image.open('static/images/chess-sleek.jpg')
 # new_image = image.resize((500, 300))
@@ -192,8 +195,9 @@ def get_player_games(client, user_name, start, end):
     opening_results_black_losses = opening_results_black_losses.sort_values(by='Percent Won', ascending=True)
 
     #-------organizes data into readable charts for webpage-------#
-    fig_white = px.bar(opening_results_white, x='First three moves', y='Total Games Played', color='User result', barmode='group', title='Results by Most Played Openings as White')
-    fig_white.update_layout(xaxis_title='Opening', yaxis_title='Result count')
+    # fig_white = px.bar(opening_results_white, x='First three moves', y='Total Games Played', color='User result', barmode='group', title='Results by Most Played Openings as White')
+    # fig_white.update_layout(xaxis_title='Opening', yaxis_title='Result count')
+    fig_white = px.bar(opening_results_white, x='First three moves', y='Total Games Played')
     fig_black = px.bar(opening_results_black, x='First three moves', y='Total Games Played', color='User result', barmode='group', title='Results by Most Played Openings as Black')
     fig_black.update_layout(xaxis_title='Opening', yaxis_title='Result count')
 
@@ -212,7 +216,6 @@ def compile_data(all_data):
     opening_results_black_losses = all_data[3]
 
     opening_results_white_wins_counted = (opening_results_white_wins[opening_results_white_wins['Total Games Played'] >= 5])[:5]
-    print(opening_results_white_wins_counted)
     opening_results_white_losses_counted = (opening_results_white_losses[opening_results_white_losses['Total Games Played'] >= 5])[:5]
     opening_results_black_wins_counted = (opening_results_black_wins[opening_results_black_wins['Total Games Played'] >= 5])[:5]
     opening_results_black_losses_counted = (opening_results_black_losses[opening_results_black_losses['Total Games Played'] >= 5])[:5]
@@ -259,7 +262,6 @@ with open('openings.txt') as file:
             opening_move = "No moves"
             opening_moves.append(opening_move)
 
-print(opening_moves)
 
 #------defines all openings into a dataframe for use-----#
 openings_data = pd.DataFrame({'Opening name': opening_names, 'Opening moves': opening_moves})
@@ -281,8 +283,16 @@ def home():
 
         all_data = get_player_games(client, user_name, start, end)
 
-        white_graph = all_data[4]
-        black_graph = all_data[5]
+        white_data = all_data[4]
+        print(white_data)
+        black_data = all_data[5]
+
+        data = json.dumps(white_data, cls=plotly.utils.PlotlyJSONEncoder)
+
+        # white_x = white_data['First three moves'].tolist()
+        # print(white_x)
+        # white_y = white_data['Total Games Played'].tolist()
+        # print(white_y)
 
         website_data = compile_data(all_data)
 
@@ -314,7 +324,7 @@ def home():
 
 
 
-        return render_template('index.html', form=form, white_w=white_w_openings, white_l=white_l_openings, black_w=black_w_openings, black_l=black_l_openings)
+        return render_template('index.html', form=form, white_w=white_w_openings, white_l=white_l_openings, black_w=black_w_openings, black_l=black_l_openings, chart1=data)
 
     return render_template('index.html', form=form)
 
