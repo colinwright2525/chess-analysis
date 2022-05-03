@@ -18,19 +18,55 @@ from wtforms import StringField, SubmitField, IntegerField, PasswordField
 from wtforms.validators import DataRequired
 from PIL import Image
 import json
+from dash import Dash, dcc, html
+import dash_html_components as html
+import flask
+from werkzeug.middleware.dispatcher import DispatcherMiddleware
 
 # image = Image.open('static/images/chess-sleek.jpg')
 # new_image = image.resize((500, 300))
 # new_image.save('static/images/chess-sleek.jpg')
 
 #------web host-------#
-app = Flask(__name__)
-app.config['SECRET_KEY'] = '8BYkEfBA6O6donzWlSihBXox7C0sKR6b'
-Bootstrap(app)
+server = Flask(__name__)
+server.config['SECRET_KEY'] = '8BYkEfBA6O6donzWlSihBXox7C0sKR6b'
+Bootstrap(server)
+
+white_graph_wins = None
+white_graph_losses = None
+black_graph_wins = None
+black_graph_losses = None
+
+dash_app = Dash(__name__, server = server, url_base_pathname='/graphs/' )
+
+def serve_layout():
+    return html.Div([html.H2('Nothing to show yet, fill out the form on the previous page to see results!')])
+
+def serve_layout_run():
+    return html.Div([
+        html.H2('Below is a graphical representation of the data on the previous page'),
+        html.Em('Note: data shown below is for openings with at least 3 games played'),
+        dcc.Graph(
+            figure=white_graph_wins
+        ),
+        dcc.Graph(
+            figure=white_graph_losses
+        ),
+        dcc.Graph(
+            figure=black_graph_wins
+        ),
+        dcc.Graph(
+            figure=black_graph_losses
+        ),
+
+    ])
+
+dash_app.layout = serve_layout
 
 #-----tokens for lichess api------#
 # API_TOKEN = 'lip_Ehpyx6vhwwDplHLeZPpd'
 # user = 'cow22'
+
 
 class Game:
     def __init__(self, color, result, moves, first_three):
@@ -179,29 +215,74 @@ def get_player_games(client, user_name, start, end):
     opening_results_white_wins['Losses'] = opening_results_white_wins['Total Games Played'] - opening_results_white_wins['All moves']
     opening_results_white_wins['Percent Won'] = round(((opening_results_white_wins['All moves'] / opening_results_white_wins['Total Games Played']) * 100), 2)
     opening_results_white_wins = opening_results_white_wins.sort_values(by='Percent Won', ascending=False)
+    opening_results_white_wins = opening_results_white_wins.rename(columns={'All moves': 'Wins'})
     opening_results_white_losses = opening_results_white[opening_results_white['User result'] == 'lost']
     opening_results_white_losses['Wins'] = opening_results_white_losses['Total Games Played'] - opening_results_white_losses['All moves']
     opening_results_white_losses['Percent Won'] = round(((opening_results_white_losses['Wins'] / opening_results_white_losses['Total Games Played']) * 100), 2)
     opening_results_white_losses = opening_results_white_losses.sort_values(by='Percent Won', ascending=True)
+    opening_results_white_losses = opening_results_white_losses.rename(columns={'All moves': 'Losses'})
 
     opening_results_black = data_black.groupby(['First three moves', 'User result', 'Opening Names', 'Total Games Played'], as_index=False).agg({'All moves': pd.Series.count})
     opening_results_black_wins = opening_results_black[opening_results_black['User result'] == 'won']
     opening_results_black_wins['Losses'] = opening_results_black_wins['Total Games Played'] - opening_results_black_wins['All moves']
     opening_results_black_wins['Percent Won'] = round(((opening_results_black_wins['All moves'] / opening_results_black_wins['Total Games Played']) * 100), 2)
     opening_results_black_wins = opening_results_black_wins.sort_values(by='Percent Won', ascending=False)
+    opening_results_black_wins = opening_results_black_wins.rename(columns={'All moves': 'Wins'})
     opening_results_black_losses = opening_results_black[opening_results_black['User result'] == 'lost']
     opening_results_black_losses['Wins'] = opening_results_black_losses['Total Games Played'] - opening_results_black_losses['All moves']
     opening_results_black_losses['Percent Won'] = round(((opening_results_black_losses['Wins'] / opening_results_black_losses['Total Games Played']) * 100), 2)
     opening_results_black_losses = opening_results_black_losses.sort_values(by='Percent Won', ascending=True)
+    opening_results_black_losses = opening_results_black_losses.rename(columns={'All moves': 'Losses'})
 
     #-------organizes data into readable charts for webpage-------#
     # fig_white = px.bar(opening_results_white, x='First three moves', y='Total Games Played', color='User result', barmode='group', title='Results by Most Played Openings as White')
     # fig_white.update_layout(xaxis_title='Opening', yaxis_title='Result count')
-    fig_white = px.bar(opening_results_white, x='First three moves', y='Total Games Played')
-    fig_black = px.bar(opening_results_black, x='First three moves', y='Total Games Played', color='User result', barmode='group', title='Results by Most Played Openings as Black')
-    fig_black.update_layout(xaxis_title='Opening', yaxis_title='Result count')
+    # fig_white_data = data_white.groupby(['First three moves', 'User result'], as_index=False).agg({'All moves': pd.Series.count})
+    # fig_white_data = fig_white_data.sort_values(by='All moves', ascending=False)
+    # fig_white_data_temp = fig_white_data[0:10]
 
-    all_data = [opening_results_white_wins, opening_results_white_losses, opening_results_black_wins, opening_results_black_losses, fig_white, fig_black]
+    # fig_white_data_total = fig_white_data.groupby('First three moves', as_index=False).agg({'All moves': pd.Series.sum})
+    opening_results_white_wins_counted = (opening_results_white_wins[opening_results_white_wins['Total Games Played'] >= 3])[:10]
+    fig_white_wins = px.bar(opening_results_white_wins_counted, x='First three moves', y=['Wins','Losses'], barmode='group', title='Results by Best Openings as White')
+    fig_white_wins.update_layout(xaxis_title='Opening', yaxis_title='Result count')
+    #newnames = {'col1': 'Wins', 'col2': 'Losses'}
+    #fig_white_wins.for_each_trace(lambda t: t.update(name=newnames[t.name],
+     #                                     legendgroup=newnames[t.name],
+      #                                    hovertemplate=t.hovertemplate.replace(t.name, newnames[t.name])
+       #                                   )
+        #               )
+
+    opening_results_white_losses_counted = (opening_results_white_losses[opening_results_white_losses['Total Games Played'] >= 3])[:10]
+    fig_white_losses = px.bar(opening_results_white_losses_counted, x='First three moves', y=['Losses', 'Wins'], barmode='group', title='Results by Worst Openings as White')
+    fig_white_losses.update_layout(xaxis_title='Opening', yaxis_title='Result count')
+    #newnames = {'col1': 'Losses', 'col2': 'Wins'}
+    ##fig_white_losses.for_each_trace(lambda t: t.update(name=newnames[t.name],
+      #                                    legendgroup=newnames[t.name],
+       #                                   hovertemplate=t.hovertemplate.replace(t.name, newnames[t.name])
+        #                                 )
+         #              )
+
+    opening_results_black_wins_counted = (opening_results_black_wins[opening_results_black_wins['Total Games Played'] >= 3])[:10]
+    fig_black_wins = px.bar(opening_results_black_wins_counted, x='First three moves', y=['Wins', 'Losses'], barmode='group', title='Results by Best Openings as Black')
+    fig_black_wins.update_layout(xaxis_title='Opening', yaxis_title='Result count')
+    #newnames = {'col1': 'Wins', 'col2': 'Losses'}
+    #fig_black_wins.for_each_trace(lambda t: t.update(name=newnames[t.name],
+     #                                                legendgroup=newnames[t.name],
+      #                                               hovertemplate=t.hovertemplate.replace(t.name, newnames[t.name])
+       #                                              )
+        #                          )
+
+    opening_results_black_losses_counted = (opening_results_black_losses[opening_results_black_losses['Total Games Played'] >= 3])[:10]
+    fig_black_losses = px.bar(opening_results_black_losses_counted, x='First three moves', y=['Losses', 'Wins'],barmode='group', title='Results by Worst Openings as Black')
+    fig_black_losses.update_layout(xaxis_title='Opening', yaxis_title='Result count')
+    #newnames = {'col1': 'Losses', 'col2': 'Wins'}
+    #fig_black_losses.for_each_trace(lambda t: t.update(name=newnames[t.name],
+     #                                                  legendgroup=newnames[t.name],
+      #                                                 hovertemplate=t.hovertemplate.replace(t.name, newnames[t.name])
+       #                                                )
+        #                            )
+
+    all_data = [opening_results_white_wins, opening_results_white_losses, opening_results_black_wins, opening_results_black_losses, fig_white_wins, fig_white_losses, fig_black_wins, fig_black_losses]
 
     return all_data
 
@@ -266,8 +347,9 @@ with open('openings.txt') as file:
 #------defines all openings into a dataframe for use-----#
 openings_data = pd.DataFrame({'Opening name': opening_names, 'Opening moves': opening_moves})
 
-@app.route('/', methods=['GET', 'POST'])
+@server.route('/', methods=['GET', 'POST'])
 def home():
+    global white_graph_wins, white_graph_losses, black_graph_wins, black_graph_losses
     form = ChessForm()
     if request.method == 'POST':
         days_back = request.form.get('days_back')
@@ -283,16 +365,13 @@ def home():
 
         all_data = get_player_games(client, user_name, start, end)
 
-        white_data = all_data[4]
-        print(white_data)
-        black_data = all_data[5]
+        white_graph_wins = all_data[4]
+        white_graph_losses = all_data[5]
+        black_graph_wins = all_data[6]
+        black_graph_losses = all_data[7]
 
-        data = json.dumps(white_data, cls=plotly.utils.PlotlyJSONEncoder)
 
-        # white_x = white_data['First three moves'].tolist()
-        # print(white_x)
-        # white_y = white_data['Total Games Played'].tolist()
-        # print(white_y)
+        dash_app.layout = serve_layout_run
 
         website_data = compile_data(all_data)
 
@@ -307,27 +386,34 @@ def home():
         black_l_openings = []
 
         for index, row in white_wins.iterrows():
-            white_w = Opening(row['Opening Names'], row['First three moves'], row['Percent Won'], row['All moves'], row['Losses'])
+            white_w = Opening(row['Opening Names'], row['First three moves'], row['Percent Won'], row['Wins'], row['Losses'])
             white_w_openings.append(white_w)
 
         for index, row in white_losses.iterrows():
-            white_l = Opening(row['Opening Names'], row['First three moves'], row['Percent Won'], row['Wins'], row['All moves'])
+            white_l = Opening(row['Opening Names'], row['First three moves'], row['Percent Won'], row['Wins'], row['Losses'])
             white_l_openings.append(white_l)
 
         for index, row in black_wins.iterrows():
-            black_w = Opening(row['Opening Names'], row['First three moves'], row['Percent Won'], row['All moves'], row['Losses'])
+            black_w = Opening(row['Opening Names'], row['First three moves'], row['Percent Won'], row['Wins'], row['Losses'])
             black_w_openings.append(black_w)
 
         for index, row in black_losses.iterrows():
-            black_l = Opening(row['Opening Names'], row['First three moves'], row['Percent Won'], row['Wins'], row['All moves'])
+            black_l = Opening(row['Opening Names'], row['First three moves'], row['Percent Won'], row['Wins'], row['Losses'])
             black_l_openings.append(black_l)
 
 
 
-        return render_template('index.html', form=form, white_w=white_w_openings, white_l=white_l_openings, black_w=black_w_openings, black_l=black_l_openings, chart1=data)
+        return render_template('index.html', form=form, white_w=white_w_openings, white_l=white_l_openings, black_w=black_w_openings, black_l=black_l_openings)
 
     return render_template('index.html', form=form)
 
+@server.route('/graphs', methods=['GET', 'POST'])
+def render_graphs():
+    return flask.redirect('/graphs')
+
+app = DispatcherMiddleware(server, {
+    '/graph1': dash_app.server
+})
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    server.run(debug=True)
